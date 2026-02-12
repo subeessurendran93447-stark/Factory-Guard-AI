@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factory Guard AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Factory Guard <span class="badge">Live</span></h1>
+            <p>Predictive Maintenance AI System</p>
+        </header>
+
+        <main class="dashboard">
+            <section class="input-panel">
+                <h2>Sensor Readings</h2>
+                <form id="sensorForm">
+                    {% for feature in features %}
+                    <div class="input-group">
+                        <label>{{ feature }}</label>
+                        <input type="number" name="{{ feature }}" step="any" placeholder="0.00" required>
+                    </div>
+                    {% endfor %}
+                    <button type="submit">Run Analysis</button>
+                </form>
+            </section>
+
+            <section class="result-panel">
+                <h2>Risk Analysis</h2>
+                <div id="gauge" class="gauge-value">--%</div>
+                <div id="statusLabel" class="status-label">Awaiting Data...</div>
+            </section>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
