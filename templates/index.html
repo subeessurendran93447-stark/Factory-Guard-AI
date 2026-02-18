@@ -1,1 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factory Guard Live</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; padding: 40px; }
+        .container { max-width: 500px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; text-transform: capitalize; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #0056b3; }
+        .result-box { margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px; }
+        #status-label { font-weight: bold; font-size: 1.2em; }
+        .critical { color: #dc3545; }
+        .stable { color: #28a745; }
+    </style>
 
+    <style>
+    body {
+        /* Replace the URL below with your image link or local path */
+        background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+                          url('https://static.wixstatic.com/media/0eebd11a42f44a168f8e6f0a1266b7ca.jpg/v1/fill/w_568,h_294,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/0eebd11a42f44a168f8e6f0a1266b7ca.jpg');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        color: white; /* Makes text white so it's readable on dark backgrounds */
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .container {
+        background: rgba(255, 255, 255, 0.1); /* Semi-transparent box */
+        backdrop-filter: blur(10px); /* Blurs the background behind the box */
+        border-radius: 15px;
+        padding: 30px;
+        margin-top: 50px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    input {
+        background: rgba(255, 255, 255, 0.9) !important;
+        border-radius: 5px;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Factory Guard Live</h2>
+    <p>Predictive Maintenance AI System</p>
+
+    <div id="sensor-form">
+        {% for f in features %}
+        <div class="input-group">
+            <label>{{ f }}</label>
+            <input type="number" step="any" class="sensor-input" data-feature="{{ f }}" placeholder="0.00" required>
+        </div>
+        {% endfor %}
+        <button id="analyze-btn">Run Analysis</button>
+    </div>
+
+    <div class="result-box">
+        <h3>Risk Analysis</h3>
+        <p>Probability: <span id="risk-value">--</span>%</p>
+        <p>Status: <span id="status-label">Awaiting Data...</span></p>
+    </div>
+</div>
+
+<script>
+    document.getElementById('analyze-btn').addEventListener('click', async () => {
+        const inputs = document.querySelectorAll('.sensor-input');
+        const payload = {};
+        
+        // Collect data from all inputs
+        inputs.forEach(input => {
+            payload[input.getAttribute('data-feature')] = input.value || 0;
+        });
+
+        const statusLabel = document.getElementById('status-label');
+        const riskValue = document.getElementById('risk-value');
+
+        try {
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (result.error) {
+                alert("Error: " + result.error);
+            } else {
+                // Update UI with results
+                riskValue.innerText = result.probability;
+                statusLabel.innerText = result.status;
+                
+                // Toggle colors based on risk
+                statusLabel.className = result.status === 'CRITICAL' ? 'critical' : 'stable';
+            }
+        } catch (err) {
+            console.error("Failed to fetch:", err);
+            alert("Connection to AI server failed.");
+        }
+    });
+</script>
+
+</body>
+</html>
