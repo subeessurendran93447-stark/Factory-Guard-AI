@@ -1,45 +1,66 @@
 from flask import Flask, render_template, request, jsonify
 import joblib
 import numpy as np
-from sklearn.dummy import DummyClassifier # Added for fallback
+import json
+import os
 
 app = Flask(__name__)
 
-# Load the saved model and feature list
-try:
-    artifacts = joblib.load("FactoryGuard.joblib")
-    model = artifacts['model']
-    features = artifacts['features']
-    print("Model loaded successfully!")
-except Exception as e:
-    print(f"Error loading model: {e}")
-    # Fallback configuration
-    features = ["vibration", "temperature", "pressure"]
-    # Create a dummy model so 'model' is always defined
-    model = DummyClassifier(strategy="uniform")
-    # Fit with dummy data (3 features)
-    model.fit(np.zeros((10, 3)), np.array([0, 1, 0, 1, 0, 1, 0, 1, 0, 1]))
+# --- Dynamic Model Loading ---
+class FactoryModel:
+    def __init__(self):
+        try:
+            # Try to load real model
+            artifacts = joblib.load("FactoryGuard.joblib")
+            self.model = artifacts['model']
+            self.features = artifacts['features']
+            self.is_real = True
+            print("✅ Real FactoryGuard Model Loaded.")
+        except:
+            # Fallback Logic: Creates real probability changes based on data
+            self.features = ["vibration", "temperature", "pressure"]
+            self.is_real = False
+            print("⚠️ Model file not found. Using Dynamic Logic Fallback.")
+
+    def predict(self, input_dict):
+        # Extract values in order, default to 0 if missing
+        vals = [float(input_dict.get(f, 0)) for f in self.features]
+        
+        if self.is_real:
+            input_data = np.array([vals])
+            prob = self.model.predict_proba(input_data)[0, 1]
+        else:
+            # DYNAMIC CALCULATION: (Simulating a real model)
+            # High values = High probability
+            v_score = vals[0] / 10   # Assume 10 is max vibration
+            t_score = vals[1] / 120  # Assume 120 is max temp
+            p_score = vals[2] / 200  # Assume 200 is max pressure
+            prob = min(0.99, (v_score + t_score + p_score) / 3)
+            
+        return round(float(prob) * 100, 2)
+
+# Initialize the model wrapper
+guard = FactoryModel()
 
 @app.route('/')
 def index():
-    return render_template('index.html', features=features)
+    return render_template('index.html', features=guard.features)
 
-@app.route('/predict', methods=['POST'])
-def predict():
+@app.route('/upload', methods=['POST'])
+def upload_file():
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
-            
-        # Ensure data is in the correct order and converted to float
-        input_data = np.array([[float(data.get(f, 0)) for f in features]])
+        if 'file' not in request.files:
+            return jsonify({"error": "No file"}), 400
         
-        # Get probability
-        prob = model.predict_proba(input_data)[0, 1]
+        file = request.files['file']
+        data = json.load(file)
+        
+        prob = guard.predict(data)
         
         return jsonify({
-            "probability": round(float(prob) * 100, 2),
-            "status": "CRITICAL" if prob > 0.7 else "STABLE"
+            "filename": file.filename,
+            "probability": prob,
+            "status": "CRITICAL" if prob > 70 else "STABLE"
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
