@@ -2,110 +2,136 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Factory Guard Live</title>
+    <title>FactoryGuard AI | Industrial Safety</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; padding: 40px; }
-        .container { max-width: 500px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; text-transform: capitalize; }
-        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        button:hover { background: #0056b3; }
-        .result-box { margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px; }
-        #status-label { font-weight: bold; font-size: 1.2em; }
-        .critical { color: #dc3545; }
-        .stable { color: #28a745; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            margin: 0; 
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
+                        url('https://images.unsplash.com/photo-1565106430482-8f6e74349ca1?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            width: 400px;
+            text-align: center;
+        }
+
+        .upload-area {
+            border: 2px dashed #007bff;
+            padding: 30px;
+            border-radius: 15px;
+            cursor: pointer;
+            margin: 20px 0;
+            transition: 0.3s;
+            background: #f8fbff;
+        }
+
+        .upload-area:hover { background: #eef6ff; transform: translateY(-2px); }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-analyze { background: #007bff; color: white; display: none; }
+        .btn-pdf { background: #dc3545; color: white; display: none; }
+
+        #resultDisplay {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            display: none;
+            font-weight: bold;
+        }
+
+        .CRITICAL { background: #ffebee; color: #c62828; border: 2px solid #ef9a9a; animation: pulse 1s infinite; }
+        .STABLE { background: #e8f5e9; color: #2e7d32; border: 2px solid #a5d6a7; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
     </style>
-
-    <style>
-    body {
-        /* Replace the URL below with your image link or local path */
-        background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
-                          url('https://static.wixstatic.com/media/0eebd11a42f44a168f8e6f0a1266b7ca.jpg/v1/fill/w_568,h_294,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/0eebd11a42f44a168f8e6f0a1266b7ca.jpg');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        color: white; /* Makes text white so it's readable on dark backgrounds */
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    .container {
-        background: rgba(255, 255, 255, 0.1); /* Semi-transparent box */
-        backdrop-filter: blur(10px); /* Blurs the background behind the box */
-        border-radius: 15px;
-        padding: 30px;
-        margin-top: 50px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    input {
-        background: rgba(255, 255, 255, 0.9) !important;
-        border-radius: 5px;
-    }
-</style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Factory Guard Live</h2>
-    <p>Predictive Maintenance AI System</p>
+    <div class="glass-card">
+        <h1 style="margin:0; color:#333;">🏭 Factory Guard AI </h1>
+        <p style="color:#666;">Predictive Maintenance System</p>
 
-    <div id="sensor-form">
-        {% for f in features %}
-        <div class="input-group">
-            <label>{{ f }}</label>
-            <input type="number" step="any" class="sensor-input" data-feature="{{ f }}" placeholder="0.00" required>
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <div id="fileText">📁 Drop or Click to Upload JSON</div>
+            <input type="file" id="fileInput" accept=".json" style="display:none">
         </div>
-        {% endfor %}
-        <button id="analyze-btn">Run Analysis</button>
-    </div>
 
-    <div class="result-box">
-        <h3>Risk Analysis</h3>
-        <p>Probability: <span id="risk-value">--</span>%</p>
-        <p>Status: <span id="status-label">Awaiting Data...</span></p>
-    </div>
-</div>
-
-<script>
-    document.getElementById('analyze-btn').addEventListener('click', async () => {
-        const inputs = document.querySelectorAll('.sensor-input');
-        const payload = {};
+        <button id="analyzeBtn" class="btn btn-analyze" onclick="processFile()">Run Health Check</button>
         
-        // Collect data from all inputs
-        inputs.forEach(input => {
-            payload[input.getAttribute('data-feature')] = input.value || 0;
-        });
+        <div id="resultDisplay"></div>
+        
+        <button id="pdfBtn" class="btn btn-pdf" onclick="generateReport()">📥 Download PDF Report</button>
+    </div>
 
-        const statusLabel = document.getElementById('status-label');
-        const riskValue = document.getElementById('risk-value');
+    <script>
+        const { jsPDF } = window.jspdf;
+        let lastResult = null;
 
-        try {
-            const response = await fetch('/predict', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            const result = await response.json();
-
-            if (result.error) {
-                alert("Error: " + result.error);
-            } else {
-                // Update UI with results
-                riskValue.innerText = result.probability;
-                statusLabel.innerText = result.status;
-                
-                // Toggle colors based on risk
-                statusLabel.className = result.status === 'CRITICAL' ? 'critical' : 'stable';
+        document.getElementById('fileInput').onchange = function(e) {
+            if(e.target.files[0]) {
+                document.getElementById('fileText').innerHTML = `<b>${e.target.files[0].name}</b>`;
+                document.getElementById('analyzeBtn').style.display = 'block';
             }
-        } catch (err) {
-            console.error("Failed to fetch:", err);
-            alert("Connection to AI server failed.");
-        }
-    });
-</script>
+        };
 
+        async function processFile() {
+            const file = document.getElementById('fileInput').files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch('/upload', { method: 'POST', body: formData });
+            lastResult = await response.json();
+
+            const resDiv = document.getElementById('resultDisplay');
+            resDiv.style.display = 'block';
+            resDiv.className = lastResult.status;
+            resDiv.innerHTML = `STATUS: ${lastResult.status}<br>RISK: ${lastResult.probability}%`;
+            
+            document.getElementById('pdfBtn').style.display = 'block';
+        }
+
+        function generateReport() {
+            const doc = new jsPDF();
+            doc.setFontSize(22);
+            doc.text("FactoryGuard Safety Report", 20, 20);
+            doc.setFontSize(12);
+            doc.text(`Timestamp: ${new Date().toLocaleString()}`, 20, 35);
+            doc.text(`Analyzed File: ${lastResult.filename}`, 20, 45);
+            doc.line(20, 50, 190, 50);
+            
+            doc.setFontSize(16);
+            doc.text(`System Health: ${lastResult.status}`, 20, 65);
+            doc.text(`Failure Probability: ${lastResult.probability}%`, 20, 75);
+            
+            doc.save(`Factory_Report_${lastResult.status}.pdf`);
+        }
+    </script>
 </body>
 </html>
